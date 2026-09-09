@@ -30,6 +30,16 @@ ${test_dir}/../flatc -p -o ${gen_code_path} -I include_test nested_union_test.fb
 ${test_dir}/../flatc -p -o ${gen_code_path} -I include_test service_test.fbs --grpc --grpc-python-typed-handlers --python-typing --no-python-gen-numpy --gen-onefile
 ${test_dir}/../flatc -p -o ${gen_code_path} union_name_test.fbs --gen-object-api
 
+# Verify that flatc --python preserves existing __init__.py files (#9229)
+mkdir -p ${gen_code_path}/preserve_test
+echo "# HANDWRITTEN CONTENT" > ${gen_code_path}/preserve_test/__init__.py
+${test_dir}/../flatc -p -o ${gen_code_path}/preserve_test -I include_test monster_test.fbs
+if ! grep -q "# HANDWRITTEN CONTENT" ${gen_code_path}/preserve_test/__init__.py; then
+  echo "FAIL: flatc overwrote existing __init__.py"
+  exit 1
+fi
+rm -rf ${gen_code_path}/preserve_test
+
 # Syntax: run_tests <interpreter> <benchmark vtable dedupes>
 #                   <benchmark read count> <benchmark build count>
 interpreters_tested=()
