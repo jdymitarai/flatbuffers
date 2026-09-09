@@ -398,6 +398,23 @@ void UnionVectorTest(const std::string& tests_data_path) {
                         "root_type Root;"),
           true);
   TEST_EQ(parser2.Parse("{a_type:Bool,a:{b:true}}"), true);
+  {
+    // Test corrupt buffer where union type field is missing in vtable (fixes #9033).
+    std::vector<uint8_t> corrupt_buf(
+        parser2.builder_.GetBufferPointer(),
+        parser2.builder_.GetBufferPointer() + parser2.builder_.GetSize());
+    auto root_pos =
+        flatbuffers::ReadScalar<flatbuffers::uoffset_t>(corrupt_buf.data());
+    auto vtable_soffset = flatbuffers::ReadScalar<flatbuffers::soffset_t>(
+        corrupt_buf.data() + root_pos);
+    auto vtable_pos = root_pos - vtable_soffset;
+    flatbuffers::WriteScalar<flatbuffers::voffset_t>(
+        corrupt_buf.data() + vtable_pos + 4, 0);
+    std::string corrupt_json;
+    auto corrupt_result = GenText(parser2, corrupt_buf.data(), &corrupt_json);
+    TEST_NOTNULL(corrupt_result);
+    TEST_EQ_STR(corrupt_result, "corrupt buffer: missing union type field");
+  }
 }
 #endif
 
